@@ -1,16 +1,12 @@
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 
 typedef int (*kprintf_write_fn_t) (const char *buf, int len);
 
 kprintf_write_fn_t kprintf_stdout = NULL;
 
-// working buffer size, allocated on stack, this is not the maximal string size
-#define KPRINTF_STACK_BUFFER_SIZE 30
-
-
-#define HEX_PRINT_MIN_SZ 10 // TODO
-
+#define TO_STRING_BUFFER_SIZE 12
 
 // %[flags][width][.precision][length]specifier
 
@@ -50,117 +46,187 @@ kprintf_write_fn_t kprintf_stdout = NULL;
 // f, F, e, E, g, G, a, A -> double
 // p
 // %
-
 // div: o (octal), n(return nb chars written via ptr)
 
 
-// write maximum size bytes, advance fmt pointer
-// fmt is set to NULL when done, no '\0' terminator is written
-// returns the number of bytes written
-static int print_to_buffer(char *buf, size_t size, const char **fmt, va_list arg)
+static char __hex_digit(uint8_t n)
 {
-    int remaining_size = size;
-    while (1) {
-        if (**fmt == '\0') {
-            *fmt = NULL; // all done
-            break;
-        }
-        if (**fmt == '%') {
-            switch (*(*fmt + 1)) {
-                case 'd':
-                case 'i':
-                    int i = va_arg(arg, int);
-                    break;
-                case 'u':
-                    unsigned int u = va_arg(arg, unsigned int);
-                    break;
-                case 'X':
-                case 'x':
-                    unsigned int x = va_arg(arg, unsigned int);
-                    // print hex, whithout 0x
-                    break;
-                case 'p':
-                    void *p = va_arg(arg, void *);
-                    // print in hex with 0x
-                    break;
-                case 'c':
-                    char c = va_arg(arg, char);
-                    // print character
-                    break;
-                case 's':
-                    const char* s = va_arg(arg, char *);
-                    // print string
-                    break;
-                case 'a':
-                case 'A':
-                case 'e':
-                case 'E':
-                case 'f':
-                case 'F':
-                case 'g':
-                case 'G':
-                    double d = va_arg(arg, double);
-                    (void) d;
-                    break;
-                case 'o':
-                    unsigned int o = va_arg(arg, unsigned int);
-                    (void) o;
-                    break;
-                case 'n':
-                    int* n = va_arg(arg, int*);
-                    (void) n;
-                    break;
-                case '%':   /* fall through */
-                default:
-                    //print character
-                    break;
-            }
-
-        }
-        if (*(*fmt + 1) == 'x') {
-            if (remaining_size >= HEX_PRINT_MIN_SZ) {
-                (*fmt) += 2;
-                // int x = (int)va_arg(arg, int);
-                // // int cnt = hex_to_str(buf, x);
-                // int cnt = 1;
-                // remaining_size -= cnt;
-                // buf += cnt;
-            }
-            continue;
-        }
-        if (remaining_size >= 1) {
-            *buf++ = **fmt;
-            (*fmt)++;
-            remaining_size--;
-        } else { // out of buffer size
-            break;
-        }
+    n = n & 0x0F;
+    if (n > 0x09) {
+        return 'a' + n-10;
+    } else {
+        return '0' + n;
     }
-    return size - remaining_size;
 }
 
-int snkprintf(char * s, size_t n, const char * fmt, ...)
+// convert to hexadecimal (with leading 0s)
+// buffer must be 8+1 bytes long
+// return length of string (without null character)
+int itoa_hex(uint32_t x, char *buffer)
 {
-
+    char *w = buffer;
+    int i;
+    for (i = 32-4; i >= 0; i -= 4)
+        *w++ = __hex_digit(x>>i);
+    *w = '\0';
+    return 8;
 }
 
+// convert to decimal
+// buffer must be 10+1 chars long for full range
+// returns lenght of string (without null character)
+int utoa_dec(uint32_t x, char *buffer)
+{
+    int len = 0;
+    char *a = buffer;
+    char *b = a;
+    do {
+        *b++ = '0' + x%10;
+        x /= 10;
+        len++;
+    } while (x > 0);
+    *b = '\0';
+    while (b > a) { // swap the digits a...b
+        char tmp = *a;
+        *a++ = *--b;
+        *b = tmp;
+    }
+    return len;
+}
+
+// convert to decimal
+// buffer must be 11+1 chars long for full range
+// returns lenght of string (without null character)
+int itoa_dec(int32_t x, char *buffer)
+{
+    int len = 0;
+    if (x < 0) {
+        x = -x;
+        *buffer++ = '-';
+        len++;
+    }
+    len += utoa_dec(x, buffer);
+    return len;
+}
 
 int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
 {
-    char buf[KPRINTF_STACK_BUFFER_SIZE];
-    int ret = 0;
-    while (fmt != NULL) {
-        int len = print_to_buffer(buf, sizeof(buf), &fmt, arg);
-        if (fmt != NULL && len == 0) {
-            return -1; // not done printing but couldn't print anything
+    int count = 0;
+    char str_buf[TO_STRING_BUFFER_SIZE];
+    while (1) {
+        int i = 0;
+        while (fmt[i] != '\0' && fmt[i] != '%')
+            i++;
+
+        /* writ string at once */
+        int len = writefn(fmt, i);
+        if (len != i)
+            return -1;
+        else
+            count += len;
+
+        fmt += i;
+
+        /* end of string */
+        if (*fmt == '\0')
+            break;
+
+        /* handle format specifier */
+        fmt++;
+        switch (*fmt) {
+            case 'd':
+            case 'i': { /* int */
+                int i = va_arg(arg, int);
+                int slen = utoa_dec((int32_t)i, str_buf);
+                int len = writefn(str_buf, slen);
+                if (len != slen)
+                    return -1;
+                count += len;
+                break;
+            }
+            case 'u': { /* unsigned int */
+                unsigned int u = va_arg(arg, unsigned int);
+                int slen = utoa_dec((uint32_t)u, str_buf);
+                int len = writefn(str_buf, slen);
+                if (len != slen)
+                    return -1;
+                count += len;
+                break;
+            }
+            case 'X':
+            case 'x': { /* unsigned int in hexacedimal */
+                unsigned int x = va_arg(arg, unsigned int);
+                int slen = itoa_hex((uint32_t)x, str_buf);
+                int len = writefn(str_buf, slen);
+                if (len != slen)
+                    return -1;
+                count += len;
+                break;
+            }
+            case 'o': { /* unsigned int in octal */
+                unsigned int o = va_arg(arg, unsigned int);
+                (void) o;   // ignored
+                break;
+            }
+            case 'p': { /* pointer */
+                void *p = va_arg(arg, void *);
+                str_buf[0] = '0';
+                str_buf[1] = 'x';
+                int slen = itoa_hex((uint32_t)p, str_buf + 2);
+                int len = writefn(str_buf, slen);
+                if (len != slen)
+                    return -1;
+                count += len;
+                break;
+            }
+            case 'c': { /* character */
+                char c = va_arg(arg, char);
+                int len = writefn(&c, 1);
+                if (len != 1)
+                    return -1;
+                count += len;
+                break;
+            }
+            case 's': { /* string */
+                const char* s = va_arg(arg, char *);
+                int slen = strlen(s);
+                int len = writefn(s, slen);
+                if (len != slen)
+                    return -1;
+                count += len;
+                break;
+            }
+            case 'a':
+            case 'A':
+            case 'e':
+            case 'E':
+            case 'f':
+            case 'F':
+            case 'g':
+            case 'G': { /* double */
+                double d = va_arg(arg, double);
+                (void) d;   // ignored
+                break;
+            }
+            case 'n': { /* return character count */
+                int* n = va_arg(arg, int*);
+                (void) n;   // ignored
+                break;
+            }
+            case '%': {
+                // print '%' character
+                int len = writefn(fmt, 1);
+                if (len != 1)
+                    return -1;
+                count += len;
+                break;
+            }
+            default:    // ignored
+                break;
         }
-        int wlen = writefn(buf, len);
-        if (wlen != len) {
-            return -1; // not all bytes were written
-        }
-        ret += len;
+        fmt++;
     }
-    return ret;
+    return count;
 }
 
 int kprintf(const char *fmt, ...)
