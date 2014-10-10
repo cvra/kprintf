@@ -78,7 +78,7 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
             i++;
 
         if (i > 0) {
-            /* writ string */
+            /* write string */
             int len = writefn(fmt, i);
             if (len != i)
                 return -1;
