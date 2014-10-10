@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
 
@@ -8,48 +8,7 @@ kprintf_write_fn_t kprintf_stdout = NULL;
 
 #define TO_STRING_BUFFER_SIZE 12
 
-// %[flags][width][.precision][length]specifier
-
-// flags:
-// -        left-justify in padding
-// +        force print sign
-// space    print '-' if negative, ' ' otherwise
-// #        print 0x or 0X (ignore a, A, e, E, f, F, g or G)
-// 0        if padding is specified, fill with 0 instead of spaces
-
-// width:
-// number   print padding
-// *        padding number is passed as preceding int argument
-
-// .precision:
-// .number  for int: minimum number of digits to be printed with leading zeroes
-//          (if .number == 0, print nothing for value 0)
-//          for float/double/etc: ignored
-// .*       same as number, just passed as preceding int argument
-
-// length:
-// none     int
-// hh       char
-// h        short int
-// l        long int
-// ll       long long int
-// j        intmax_t uintmax_t
-// z        size_t
-// t        ptrdiff_t
-// L        long double
-
-// specifiers:
-// d, i
-// u
-// x, X
-// c, s
-// f, F, e, E, g, G, a, A -> double
-// p
-// %
-// div: o (octal), n(return nb chars written via ptr)
-
-
-static char __hex_digit(uint8_t n)
+static char itoa_hex_digit(uint8_t n)
 {
     n = n & 0x0F;
     if (n > 0x09) {
@@ -67,7 +26,7 @@ static int itoa_hex(uint32_t x, char *buffer)
     char *w = buffer;
     int i;
     for (i = 32-4; i >= 0; i -= 4)
-        *w++ = __hex_digit(x>>i);
+        *w++ = itoa_hex_digit(x>>i);
     *w = '\0';
     return 8;
 }
@@ -209,7 +168,7 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
                 break;
             }
             case 'n': { /* return character count */
-                int* n = va_arg(arg, int*);
+                int *n = va_arg(arg, int *);
                 (void) n;   // ignored
                 break;
             }
