@@ -180,7 +180,7 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
                 break;
             }
             case 'c': { /* character */
-                char c = va_arg(arg, char);
+                char c = (char) va_arg(arg, int);
                 int len = writefn(&c, 1);
                 if (len != 1)
                     return -1;
