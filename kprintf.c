@@ -77,12 +77,14 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
         while (fmt[i] != '\0' && fmt[i] != '%')
             i++;
 
-        /* writ string at once */
-        int len = writefn(fmt, i);
-        if (len != i)
-            return -1;
-        else
-            count += len;
+        if (i > 0) {
+            /* writ string */
+            int len = writefn(fmt, i);
+            if (len != i)
+                return -1;
+            else
+                count += len;
+        }
 
         fmt += i;
 
