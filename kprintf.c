@@ -172,7 +172,7 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
                 void *p = va_arg(arg, void *);
                 str_buf[0] = '0';
                 str_buf[1] = 'x';
-                int slen = itoa_hex((uint32_t)p, str_buf + 2);
+                int slen = 2 + itoa_hex((uint32_t)p, str_buf + 2);
                 int len = writefn(str_buf, slen);
                 if (len != slen)
                     return -1;
