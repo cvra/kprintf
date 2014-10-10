@@ -62,7 +62,7 @@ static char __hex_digit(uint8_t n)
 // convert to hexadecimal (with leading 0s)
 // buffer must be 8+1 bytes long
 // return length of string (without null character)
-int itoa_hex(uint32_t x, char *buffer)
+static int itoa_hex(uint32_t x, char *buffer)
 {
     char *w = buffer;
     int i;
@@ -75,7 +75,7 @@ int itoa_hex(uint32_t x, char *buffer)
 // convert to decimal
 // buffer must be 10+1 chars long for full range
 // returns lenght of string (without null character)
-int utoa_dec(uint32_t x, char *buffer)
+static int utoa_dec(uint32_t x, char *buffer)
 {
     int len = 0;
     char *a = buffer;
@@ -97,7 +97,7 @@ int utoa_dec(uint32_t x, char *buffer)
 // convert to decimal
 // buffer must be 11+1 chars long for full range
 // returns lenght of string (without null character)
-int itoa_dec(int32_t x, char *buffer)
+static int itoa_dec(int32_t x, char *buffer)
 {
     int len = 0;
     if (x < 0) {
