@@ -137,7 +137,7 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
             case 'd':
             case 'i': { /* int */
                 int i = va_arg(arg, int);
-                int slen = utoa_dec((int32_t)i, str_buf);
+                int slen = itoa_dec((int32_t)i, str_buf);
                 int len = writefn(str_buf, slen);
                 if (len != slen)
                     return -1;
