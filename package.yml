@@ -1,0 +1,9 @@
+depends:
+    - test-runner
+
+source:
+    - kprintf.c
+
+tests:
+    - test/kprintf_test.cpp
+
