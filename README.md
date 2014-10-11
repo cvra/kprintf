@@ -1,8 +1,8 @@
 # kprintf
 
-This is a simple printf implementation.
+This is a simple printf implementation for debugging.
 * reentrant
-* ´no malloc()´
+* no `malloc()`
 * supported types: int, char, string, pointer
 
 ## Note
