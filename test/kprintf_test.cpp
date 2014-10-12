@@ -25,6 +25,14 @@ TEST_GROUP(KprintfTestGroup)
     }
 };
 
+TEST(KprintfTestGroup, EmptyString)
+{
+    const char *str = "";
+    int ret = kprintf(str);
+    CHECK_EQUAL(strlen(str), ret);
+    STRCMP_EQUAL(str, buffer);
+}
+
 TEST(KprintfTestGroup, NoFormatArguments)
 {
     const char *str = "hello world";
