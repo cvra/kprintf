@@ -182,6 +182,9 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
                 count += len;
                 break;
             }
+            case '\0': /* incomplete format specifier */
+                // ignore and return normally
+                return count;
             default:    // ignored
                 break;
         }

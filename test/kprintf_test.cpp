@@ -100,3 +100,10 @@ TEST(KprintfTestGroup, UnsupportedTypes)
     CHECK_EQUAL(strlen(expect), ret);
     STRCMP_EQUAL(expect, buffer);
 }
+
+TEST(KprintfTestGroup, IncompleteFormatSpecifier)
+{
+    int ret = kprintf("%");
+    CHECK_EQUAL(0, ret);
+    STRCMP_EQUAL("", buffer);
+}
