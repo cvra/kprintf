@@ -25,8 +25,9 @@ static int itoa_hex(uint32_t x, char *buffer)
 {
     char *w = buffer;
     int i;
-    for (i = 32-4; i >= 0; i -= 4)
+    for (i = 32-4; i >= 0; i -= 4) {
         *w++ = itoa_hex_digit(x>>i);
+    }
     *w = '\0';
     return 8;
 }
@@ -74,23 +75,26 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
     char str_buf[TO_STRING_BUFFER_SIZE];
     while (1) {
         int i = 0;
-        while (fmt[i] != '\0' && fmt[i] != '%')
+        while (fmt[i] != '\0' && fmt[i] != '%') {
             i++;
+        }
 
         if (i > 0) {
             /* write string */
             int len = writefn(fmt, i);
-            if (len != i)
+            if (len != i) {
                 return -1;
-            else
+            } else {
                 count += len;
+            }
         }
 
         fmt += i;
 
         /* end of string */
-        if (*fmt == '\0')
+        if (*fmt == '\0') {
             break;
+        }
 
         /* handle format specifier */
         fmt++;
@@ -100,8 +104,9 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
                 int i = va_arg(arg, int);
                 int slen = itoa_dec((int32_t)i, str_buf);
                 int len = writefn(str_buf, slen);
-                if (len != slen)
+                if (len != slen) {
                     return -1;
+                }
                 count += len;
                 break;
             }
@@ -109,8 +114,9 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
                 unsigned int u = va_arg(arg, unsigned int);
                 int slen = utoa_dec((uint32_t)u, str_buf);
                 int len = writefn(str_buf, slen);
-                if (len != slen)
+                if (len != slen) {
                     return -1;
+                }
                 count += len;
                 break;
             }
@@ -119,8 +125,9 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
                 unsigned int x = va_arg(arg, unsigned int);
                 int slen = itoa_hex((uint32_t)x, str_buf);
                 int len = writefn(str_buf, slen);
-                if (len != slen)
+                if (len != slen) {
                     return -1;
+                }
                 count += len;
                 break;
             }
@@ -135,16 +142,18 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
                 str_buf[1] = 'x';
                 int slen = 2 + itoa_hex((uint32_t)p, str_buf + 2);
                 int len = writefn(str_buf, slen);
-                if (len != slen)
+                if (len != slen) {
                     return -1;
+                }
                 count += len;
                 break;
             }
             case 'c': { /* character */
                 char c = (char) va_arg(arg, int);
                 int len = writefn(&c, 1);
-                if (len != 1)
+                if (len != 1) {
                     return -1;
+                }
                 count += len;
                 break;
             }
@@ -152,8 +161,9 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
                 const char* s = va_arg(arg, char *);
                 int slen = strlen(s);
                 int len = writefn(s, slen);
-                if (len != slen)
+                if (len != slen) {
                     return -1;
+                }
                 count += len;
                 break;
             }
@@ -177,8 +187,9 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
             case '%': {
                 // print '%' character
                 int len = writefn(fmt, 1);
-                if (len != 1)
+                if (len != 1) {
                     return -1;
+                }
                 count += len;
                 break;
             }
