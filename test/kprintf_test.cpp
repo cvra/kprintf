@@ -1,3 +1,4 @@
+#include <cstring>
 #include "CppUTest/TestHarness.h"
 #include "../kprintf.h"
 
