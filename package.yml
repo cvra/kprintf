@@ -5,5 +5,5 @@ source:
     - kprintf.c
 
 tests:
-    - test/kprintf_test.cpp
+    - tests/kprintf_test.cpp
 
