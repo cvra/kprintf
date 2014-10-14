@@ -4,7 +4,7 @@
 
 char buffer[1024];
 int write_pos;
-extern "C"
+
 int test_write(const char *buf, int len)
 {
     int i = 0;
@@ -22,7 +22,7 @@ TEST_GROUP(KprintfTestGroup)
     {
         memset(buffer, 0, sizeof(buffer));
         write_pos = 0;
-        kprintf_stdout = test_write;
+        UT_PTR_SET(kprintf_stdout, test_write);
     }
 };
 
