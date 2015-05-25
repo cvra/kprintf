@@ -1,11 +1,10 @@
 # kprintf
+This is a minimalist formatted print function for debugging purpose in an embedded system with limited memory and processing power.
+* Reentrant: only local buffers, no global state.
+* Requires no `malloc()`.
+* Supported format specifiers: `%d`, `%i`, `%u`, `%x`, `%p`, `%c`, `%s`
 
-This is a simple printf implementation for debugging.
-* reentrant
-* no `malloc()`
-* supported types: int, char, string, pointer
-
-## Note
+## Limitations
 * Only for 32bit systems.
-* not supported type will be ignored.
-* Using any formatting option for padding, length or precision will result in a wrong output.
+* No formatting options for padding, length or precision.
+* No 64bit integer, no `float`, no `double`.
