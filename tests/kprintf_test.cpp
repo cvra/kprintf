@@ -123,3 +123,35 @@ TEST(KprintfTestGroup, IncompleteFormatSpecifier)
     CHECK_EQUAL(0, ret);
     STRCMP_EQUAL("", buffer);
 }
+
+TEST_GROUP(SnkprintfTestGroup)
+{
+    void setup(void)
+    {
+        // ensure non-zero filled buffer
+        memset(buffer, 0x55, sizeof(buffer));
+    }
+};
+
+TEST(SnkprintfTestGroup, PrintsCompleteString)
+{
+    const char *expect = "Forty-two, said Deep Thought, with infinite majesty and calm.";
+    int ret = snkprintf(buffer, sizeof(buffer), expect);
+    CHECK_EQUAL(strlen(expect), ret);
+    STRCMP_EQUAL(expect, buffer);
+}
+
+TEST(SnkprintfTestGroup, NullTerminatedString)
+{
+    int ret = snkprintf(buffer, sizeof(buffer), "Don't %s", "Panic!");
+    CHECK_EQUAL(buffer[ret], '\0');
+}
+
+TEST(SnkprintfTestGroup, RespectsLimits)
+{
+    int ret = snkprintf(buffer, 6, "%s", "hello world");
+    CHECK_TRUE(ret >= 6);
+    CHECK_EQUAL(buffer[5], '\0');
+    CHECK_EQUAL(buffer[6], 0x55);
+    STRCMP_EQUAL("hello", buffer);
+}
