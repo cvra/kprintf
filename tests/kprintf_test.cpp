@@ -1,4 +1,6 @@
-#include <cstring>
+#include <string.h>
+#include <stdint.h>
+#include <limits.h>
 #include "CppUTest/TestHarness.h"
 #include "../kprintf.h"
 
@@ -22,14 +24,13 @@ TEST_GROUP(KprintfTestGroup)
     {
         memset(buffer, 0, sizeof(buffer));
         write_pos = 0;
-        UT_PTR_SET(kprintf_stdout, test_write);
     }
 };
 
 TEST(KprintfTestGroup, EmptyString)
 {
     const char *str = "";
-    int ret = kprintf(str);
+    int ret = kprintf(test_write, str);
     CHECK_EQUAL(strlen(str), ret);
     STRCMP_EQUAL(str, buffer);
 }
@@ -37,58 +38,63 @@ TEST(KprintfTestGroup, EmptyString)
 TEST(KprintfTestGroup, NoFormatArguments)
 {
     const char *str = "hello world";
-    int ret = kprintf(str);
+    int ret = kprintf(test_write, str);
     CHECK_EQUAL(strlen(str), ret);
     STRCMP_EQUAL(str, buffer);
 }
 
-TEST(KprintfTestGroup, CanPrintInt)
-{
-    int i = -42;
-    int ret = kprintf("%d", i);
-    CHECK_EQUAL(3, ret);
-    STRCMP_EQUAL("-42", buffer);
-}
-
 TEST(KprintfTestGroup, CanPrintIntMax)
 {
-    int i = (1<<31);
-    int ret = kprintf("%d", i);
-    CHECK_EQUAL(11, ret);   // 10 digits + sign
-    STRCMP_EQUAL("-2147483648", buffer);
+    int32_t i = INT_MAX;
+    int ret = kprintf(test_write, "%d", i);
+    const char *expect = "2147483647";
+    CHECK_EQUAL(strlen(expect), ret);
+    STRCMP_EQUAL(expect, buffer);
 }
 
-TEST(KprintfTestGroup, CanPrintUint)
+TEST(KprintfTestGroup, CanPrintIntMin)
 {
-    int i = 42;
-    int ret = kprintf("%u", i);
-    CHECK_EQUAL(2, ret);
-    STRCMP_EQUAL("42", buffer);
+    int32_t i = INT_MIN;
+    int ret = kprintf(test_write, "%d", i);
+    const char *expect = "-2147483648";
+    CHECK_EQUAL(strlen(expect), ret);
+    STRCMP_EQUAL(expect, buffer);
+}
+
+TEST(KprintfTestGroup, CanPrintUintMax)
+{
+    uint32_t i = UINT_MAX;
+    int ret = kprintf(test_write, "%u", i);
+    const char *expect = "4294967295";
+    CHECK_EQUAL(strlen(expect), ret);
+    STRCMP_EQUAL(expect, buffer);
 }
 
 TEST(KprintfTestGroup, CanPrintHex)
 {
-    int i = 0x1234abcd;
-    int ret = kprintf("0x%x", i);
-    CHECK_EQUAL(10, ret);
-    STRCMP_EQUAL("0x1234abcd", buffer);
+    int32_t i = 0x1234abcd;
+    int ret = kprintf(test_write, "0x%x", i);
+    const char *expect = "0x1234abcd";
+    CHECK_EQUAL(strlen(expect), ret);
+    STRCMP_EQUAL(expect, buffer);
 }
 
 TEST(KprintfTestGroup, CanPrintPtr)
 {
-    int i = 0x1234abcd;
-    int ret = kprintf("%p", i);
-    CHECK_EQUAL(10, ret);
-    STRCMP_EQUAL("0x1234abcd", buffer);
+    uint32_t p = 0x12ab;
+    int ret = kprintf(test_write, "%p", p);
+    const char *expect = "000012ab";
+    CHECK_EQUAL(strlen(expect), ret);
+    STRCMP_EQUAL(expect, buffer);
 }
 
 TEST(KprintfTestGroup, CanPrintMultipleArgs)
 {
-    int p = 0x1234abcd;
-    int i = (1<<31);
+    uint32_t p = 0xc0ffee42;
+    int i = 42;
     char s[] = "hello";
-    int ret = kprintf("int: %d, ptr: %p, str: %s, char: %c", i, p, s, 'c');
-    const char *expect = "int: -2147483648, ptr: 0x1234abcd, str: hello, char: c";
+    int ret = kprintf(test_write, "int: %d, pointer: %p, string: %s, char: %c", i, p, s, 'c');
+    const char *expect = "int: 42, pointer: c0ffee42, string: hello, char: c";
     CHECK_EQUAL(strlen(expect), ret);
     STRCMP_EQUAL(expect, buffer);
 }
@@ -96,15 +102,23 @@ TEST(KprintfTestGroup, CanPrintMultipleArgs)
 TEST(KprintfTestGroup, UnsupportedTypes)
 {
     /* unsupported format specifiers: f, F, e, E, g, G, a, A, n, o */
-    int ret = kprintf("%f%F%e%E%g%G%a%A%n%o%d",.1,.1,.1,.1,.1,.1,.1,.1,NULL,0,42);
-    const char *expect = "42";
+    int ret = kprintf(test_write, "hello%f %F %e %E %g %G %a %A %n %o %d",
+        .1, .1, .1, .1, .1, .1, .1, .1, NULL, 0, 42);
+    const char *expect = "hello";
     CHECK_EQUAL(strlen(expect), ret);
     STRCMP_EQUAL(expect, buffer);
 }
 
+TEST(KprintfTestGroup, CANPrintPercent)
+{
+    int ret = kprintf(test_write, "%%");
+    CHECK_EQUAL(1, ret);
+    STRCMP_EQUAL("%", buffer);
+}
+
 TEST(KprintfTestGroup, IncompleteFormatSpecifier)
 {
-    int ret = kprintf("%");
+    int ret = kprintf(test_write, "%");
     CHECK_EQUAL(0, ret);
     STRCMP_EQUAL("", buffer);
 }

@@ -2,10 +2,6 @@
 #include <stdarg.h>
 #include <string.h>
 
-typedef int (*kprintf_write_fn_t) (const char *buf, int len);
-
-kprintf_write_fn_t kprintf_stdout = NULL;
-
 #define TO_STRING_BUFFER_SIZE 12
 
 static char itoa_hex_digit(uint8_t n)
@@ -69,7 +65,7 @@ static int itoa_dec(int32_t x, char *buffer)
     return len;
 }
 
-int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
+int vfkprintf(int (*writefn) (const char *buf, int len), const char *fmt, va_list arg)
 {
     int count = 0;
     char str_buf[TO_STRING_BUFFER_SIZE];
@@ -81,15 +77,9 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
 
         if (i > 0) {
             /* write string */
-            int len = writefn(fmt, i);
-            if (len != i) {
-                return -1;
-            } else {
-                count += len;
-            }
+            count += writefn(fmt, i);
+            fmt += i;
         }
-
-        fmt += i;
 
         /* end of string */
         if (*fmt == '\0') {
@@ -120,8 +110,9 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
                 count += len;
                 break;
             }
-            case 'X':
-            case 'x': { /* unsigned int in hexacedimal */
+            case 'p': /* pointer */
+            case 'X': /* unsigned int in hexacedimal */
+            case 'x': {
                 unsigned int x = va_arg(arg, unsigned int);
                 int slen = itoa_hex((uint32_t)x, str_buf);
                 int len = writefn(str_buf, slen);
@@ -131,87 +122,33 @@ int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg)
                 count += len;
                 break;
             }
-            case 'o': { /* unsigned int in octal */
-                unsigned int o = va_arg(arg, unsigned int);
-                (void) o;   // ignored
-                break;
-            }
-            case 'p': { /* pointer */
-                void *p = va_arg(arg, void *);
-                str_buf[0] = '0';
-                str_buf[1] = 'x';
-                int slen = 2 + itoa_hex((size_t)p, str_buf + 2);
-                int len = writefn(str_buf, slen);
-                if (len != slen) {
-                    return -1;
-                }
-                count += len;
-                break;
-            }
             case 'c': { /* character */
                 char c = (char) va_arg(arg, int);
-                int len = writefn(&c, 1);
-                if (len != 1) {
-                    return -1;
-                }
-                count += len;
+                count += writefn(&c, 1);
                 break;
             }
             case 's': { /* string */
                 const char* s = va_arg(arg, char *);
                 int slen = strlen(s);
-                int len = writefn(s, slen);
-                if (len != slen) {
-                    return -1;
-                }
-                count += len;
+                count += writefn(s, slen);
                 break;
             }
-            case 'a':
-            case 'A':
-            case 'e':
-            case 'E':
-            case 'f':
-            case 'F':
-            case 'g':
-            case 'G': { /* double */
-                double d = va_arg(arg, double);
-                (void) d;   // ignored
+            case '%': /* print '%' character */
+                count += writefn(fmt, 1);
                 break;
-            }
-            case 'n': { /* return character count */
-                int *n = va_arg(arg, int *);
-                (void) n;   // ignored
-                break;
-            }
-            case '%': {
-                // print '%' character
-                int len = writefn(fmt, 1);
-                if (len != 1) {
-                    return -1;
-                }
-                count += len;
-                break;
-            }
-            case '\0': /* incomplete format specifier */
-                // ignore and return normally
+            default: /* not supported format specifier, abort */
                 return count;
-            default:    // ignored
-                break;
         }
         fmt++;
     }
     return count;
 }
 
-int kprintf(const char *fmt, ...)
+int kprintf(int (*writefn)(const char *buf, int len), const char *fmt, ...)
 {
-    int ret = -1;
     va_list args;
     va_start(args, fmt);
-    if (kprintf_stdout) {
-        ret = vfkprintf(kprintf_stdout, fmt, args);
-    }
+    int ret = vfkprintf(writefn, fmt, args);
     va_end(args);
     return ret;
 }

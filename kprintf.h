@@ -7,13 +7,11 @@ extern "C" {
 
 #include <stdarg.h>
 
-typedef int (*kprintf_write_fn_t) (const char *buf, int len);
-
-extern kprintf_write_fn_t kprintf_stdout;
-
-int vfkprintf(kprintf_write_fn_t writefn, const char *fmt, va_list arg);
-
-int kprintf(const char *fmt, ...);
+// Print a formatted string with the given wirte function.
+// note: writefn cannot fail (negative return value will be ignored)
+// returns the number of bytes written.
+int vfkprintf(int (*writefn)(const char *buf, int len), const char *fmt, va_list arg);
+int kprintf(int (*writefn)(const char *buf, int len), const char *fmt, ...);
 
 #ifdef __cplusplus
 }
