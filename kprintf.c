@@ -65,7 +65,8 @@ static int itoa_dec(int32_t x, char *buffer)
     return len;
 }
 
-int vfkprintf(int (*writefn) (const char *buf, int len), const char *fmt, va_list arg)
+int vfkprintf(int (*writefn)(void *arg, const char *str, int len),
+    void *p, const char *fmt, va_list arg)
 {
     int count = 0;
     char str_buf[TO_STRING_BUFFER_SIZE];
@@ -77,7 +78,7 @@ int vfkprintf(int (*writefn) (const char *buf, int len), const char *fmt, va_lis
 
         if (i > 0) {
             /* write string */
-            count += writefn(fmt, i);
+            count += writefn(p, fmt, i);
             fmt += i;
         }
 
@@ -93,7 +94,7 @@ int vfkprintf(int (*writefn) (const char *buf, int len), const char *fmt, va_lis
             case 'i': { /* int */
                 int i = va_arg(arg, int);
                 int slen = itoa_dec((int32_t)i, str_buf);
-                int len = writefn(str_buf, slen);
+                int len = writefn(p, str_buf, slen);
                 if (len != slen) {
                     return -1;
                 }
@@ -103,7 +104,7 @@ int vfkprintf(int (*writefn) (const char *buf, int len), const char *fmt, va_lis
             case 'u': { /* unsigned int */
                 unsigned int u = va_arg(arg, unsigned int);
                 int slen = utoa_dec((uint32_t)u, str_buf);
-                int len = writefn(str_buf, slen);
+                int len = writefn(p, str_buf, slen);
                 if (len != slen) {
                     return -1;
                 }
@@ -115,7 +116,7 @@ int vfkprintf(int (*writefn) (const char *buf, int len), const char *fmt, va_lis
             case 'x': {
                 unsigned int x = va_arg(arg, unsigned int);
                 int slen = itoa_hex((uint32_t)x, str_buf);
-                int len = writefn(str_buf, slen);
+                int len = writefn(p, str_buf, slen);
                 if (len != slen) {
                     return -1;
                 }
@@ -124,17 +125,17 @@ int vfkprintf(int (*writefn) (const char *buf, int len), const char *fmt, va_lis
             }
             case 'c': { /* character */
                 char c = (char) va_arg(arg, int);
-                count += writefn(&c, 1);
+                count += writefn(p, &c, 1);
                 break;
             }
             case 's': { /* string */
                 const char* s = va_arg(arg, char *);
                 int slen = strlen(s);
-                count += writefn(s, slen);
+                count += writefn(p, s, slen);
                 break;
             }
             case '%': /* print '%' character */
-                count += writefn(fmt, 1);
+                count += writefn(p, fmt, 1);
                 break;
             default: /* not supported format specifier, abort */
                 return count;
@@ -144,11 +145,48 @@ int vfkprintf(int (*writefn) (const char *buf, int len), const char *fmt, va_lis
     return count;
 }
 
-int kprintf(int (*writefn)(const char *buf, int len), const char *fmt, ...)
+
+int kprintf(int (*writefn)(void *arg, const char *str, int len),
+    void *p, const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    int ret = vfkprintf(writefn, fmt, args);
+    int ret = vfkprintf(writefn, p, fmt, args);
     va_end(args);
+    return ret;
+}
+
+struct snkprintf_buf {
+    int size;
+    char *str;
+};
+
+static int snkprintf_write(void *arg, const char *str, int len)
+{
+    struct snkprintf_buf *buf = (struct snkprintf_buf *)arg;
+    int count;
+    if (len > buf->size) {
+        count = buf->size;
+        buf->size = 0;
+    } else {
+        count = len;
+        buf->size -= len;
+    }
+    while (count-- > 0) {
+        *buf->str++ = *str++;
+    }
+    return len;
+}
+
+int snkprintf(char *str, size_t size, const char *fmt, ...)
+{
+    struct snkprintf_buf buf = {.str = str, .size = (int)size - 1};
+
+    va_list args;
+    va_start(args, fmt);
+    int ret = vfkprintf(snkprintf_write, &buf, fmt, args);
+    va_end(args);
+
+    *buf.str = '\0';
     return ret;
 }
