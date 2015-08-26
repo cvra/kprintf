@@ -4,27 +4,19 @@
 
 #define TO_STRING_BUFFER_SIZE 12
 
-static char itoa_hex_digit(uint8_t n)
-{
-    n = n & 0x0F;
-    if (n > 0x09) {
-        return 'a' + n-10;
-    } else {
-        return '0' + n;
-    }
-}
-
 // convert to hexadecimal (with leading 0s)
 // buffer must be 8+1 bytes long
 // return length of string (without null character)
 static int itoa_hex(uint32_t x, char *buffer)
 {
-    char *w = buffer;
-    int i;
-    for (i = 32-4; i >= 0; i -= 4) {
-        *w++ = itoa_hex_digit(x>>i);
-    }
+    static const char hex_tbl[]
+        = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
+    char *w = buffer + 8;
     *w = '\0';
+    do {
+        *--w = hex_tbl[x & 0x0f];
+        x >>= 4;
+    } while(w > buffer);
     return 8;
 }
 
