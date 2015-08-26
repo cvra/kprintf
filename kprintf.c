@@ -2,8 +2,6 @@
 #include <stdarg.h>
 #include <string.h>
 
-#define TO_STRING_BUFFER_SIZE 12
-
 // convert to hexadecimal (with leading 0s)
 // buffer must be 8+1 bytes long
 // return length of string (without null character)
@@ -61,7 +59,7 @@ int vfkprintf(int (*writefn)(void *arg, const char *str, int len),
     void *p, const char *fmt, va_list arg)
 {
     int count = 0;
-    char str_buf[TO_STRING_BUFFER_SIZE];
+    char str_buf[sizeof("-2147483647")];
     while (1) {
         int i = 0;
         while (fmt[i] != '\0' && fmt[i] != '%') {
